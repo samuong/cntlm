@@ -17,7 +17,7 @@ CC		:= gcc
 VER		:= $(shell cat VERSION)
 OS		:= $(shell uname -s)
 OSLDFLAGS	:= $(shell [ $(OS) = "SunOS" ] && echo "-lrt -lsocket -lnsl")
-LDFLAGS		:= -lpthread $(OSLDFLAGS)
+LDFLAGS		:= -lpthread -lpacparser $(OSLDFLAGS)
 CYGWIN_REQS	:= cygwin1.dll cyggcc_s-1.dll cygstdc++-6.dll cygrunsrv.exe 
 
 ifeq ($(DEBUG),1)

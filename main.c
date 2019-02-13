@@ -41,6 +41,7 @@
 #include <syslog.h>
 #include <termios.h>
 #include <fnmatch.h>
+#include <pacparser.h>
 
 /*
  * Some helping routines like linked list manipulation substr(), memory
@@ -341,7 +342,9 @@ void *proxy_thread(void *thread_data) {
 
 			keep_alive = hlist_subcmp(request->headers, "Proxy-Connection", "keep-alive");
 
-			if (noproxy_match(request->hostname))
+			//if (noproxy_match(request->hostname))
+			char *proxy = pacparser_find_proxy(request->url, request->hostname);
+			if (strncmp("DIRECT", proxy, 7))
 				ret = direct_request(thread_data, request);
 			else
 				ret = forward_request(thread_data, request);
@@ -1296,6 +1299,20 @@ int main(int argc, char **argv) {
 	free(cauth);
 
 	/*
+	 * FIXME: I put this here so that it would be done before any potential
+	 * calls to 'goto bailout', but it's probably the wrong place because
+	 * it breaks 'cntlm -H'.
+	 */
+	if (pacparser_init() == 0) {
+		syslog(LOG_ERR, "Error initialising Pacparser\n");
+		myexit(1);
+	}
+	if (pacparser_parse_pac("gblproxy.pac") == 0) {
+		syslog(LOG_ERR, "Error parsing PAC file\n");
+		myexit(1);
+	}
+
+	/*
 	 * Try known NTLM auth combinations and print which ones work.
 	 * User can pick the best (most secure) one as his config.
 	 */
@@ -1615,6 +1632,8 @@ int main(int argc, char **argv) {
 	}
 
 bailout:
+	pacparser_cleanup();
+
 	if (strlen(cpidfile))
 		unlink(cpidfile);
 
